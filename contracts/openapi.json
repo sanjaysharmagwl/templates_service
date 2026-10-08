@@ -1,0 +1,325 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Service Template",
+    "description": "Example service: refunds against captured payments.",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/healthz": {
+      "get": {
+        "tags": [
+          "operations"
+        ],
+        "summary": "Report that the service is running",
+        "operationId": "getHealth",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/payments/{payment_id}/refunds": {
+      "post": {
+        "tags": [
+          "refunds"
+        ],
+        "summary": "Refund part or all of a captured payment",
+        "operationId": "requestRefund",
+        "parameters": [
+          {
+            "name": "payment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64,
+              "pattern": "^[A-Za-z0-9_-]+$",
+              "examples": [
+                "pay_8Zk2"
+              ],
+              "title": "Payment Id"
+            }
+          },
+          {
+            "name": "idempotency-key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255,
+              "pattern": "^[A-Za-z0-9_-]+$",
+              "description": "Unique key for this refund request. Retrying with the same key and the same body returns the original refund instead of creating another.",
+              "examples": [
+                "3f1c9a52-7d0e-4c58-9d55-0f2d6b7a1e11"
+              ],
+              "title": "Idempotency-Key"
+            },
+            "description": "Unique key for this refund request. Retrying with the same key and the same body returns the original refund instead of creating another."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefundRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefundResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The request body could not be read.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The payment does not exist.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The idempotency key was already used for a different request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The request is malformed or breaks a business rule.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Amount": {
+        "properties": {
+          "value": {
+            "type": "string",
+            "pattern": "^\\d{1,12}(\\.\\d{1,3})?$",
+            "title": "Value",
+            "description": "Amount in major units of the currency, for example 25.00.",
+            "examples": [
+              "25.00"
+            ]
+          },
+          "currency": {
+            "$ref": "#/components/schemas/Currency"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "value",
+          "currency"
+        ],
+        "title": "Amount",
+        "description": "A sum of money. The value is a decimal string, never a JSON number."
+      },
+      "Currency": {
+        "type": "string",
+        "enum": [
+          "EUR",
+          "INR",
+          "JPY",
+          "USD"
+        ],
+        "title": "Currency",
+        "description": "ISO 4217 currencies this service accepts."
+      },
+      "ErrorCode": {
+        "type": "string",
+        "enum": [
+          "bad_request",
+          "not_found",
+          "method_not_allowed",
+          "validation_error",
+          "payment_not_found",
+          "idempotency_key_conflict",
+          "currency_mismatch",
+          "invalid_amount",
+          "refund_exceeds_refundable_amount",
+          "internal_error"
+        ],
+        "title": "ErrorCode",
+        "description": "Stable, machine-readable error codes. Clients branch on these."
+      },
+      "ErrorDetail": {
+        "properties": {
+          "field": {
+            "type": "string",
+            "title": "Field",
+            "description": "Location of the problem, for example body.amount.value."
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "field",
+          "message"
+        ],
+        "title": "ErrorDetail"
+      },
+      "ErrorResponse": {
+        "properties": {
+          "code": {
+            "$ref": "#/components/schemas/ErrorCode"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "description": "Human-readable explanation. Do not parse it."
+          },
+          "details": {
+            "items": {
+              "$ref": "#/components/schemas/ErrorDetail"
+            },
+            "type": "array",
+            "title": "Details"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "ErrorResponse",
+        "description": "The body of every error response from this service."
+      },
+      "HealthResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "ok",
+            "title": "Status"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "HealthResponse"
+      },
+      "RefundRequest": {
+        "properties": {
+          "amount": {
+            "$ref": "#/components/schemas/Amount"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason",
+            "description": "Why the refund is being made. Shown to operations staff.",
+            "examples": [
+              "Customer returned the item"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "amount"
+        ],
+        "title": "RefundRequest"
+      },
+      "RefundResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "payment_id": {
+            "type": "string",
+            "title": "Payment Id"
+          },
+          "amount": {
+            "$ref": "#/components/schemas/Amount"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "requested_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Requested At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "payment_id",
+          "amount",
+          "reason",
+          "requested_at"
+        ],
+        "title": "RefundResponse"
+      }
+    }
+  }
+}

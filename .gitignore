@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+dist/
+*.egg-info/
+
+# Tool caches
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.hypothesis/
+.import_linter_cache/
+.coverage
+htmlcov/
+
+# Local environment and secrets: never commit these
+.env
+.env.*
+!.env.example
+
+# Editors and OS
+.idea/
+.vscode/
+.DS_Store
+
+# Personal AI-tool settings. Shared instructions live in AGENTS.md and .agents/.
+CLAUDE.local.md
+.claude/settings.local.json

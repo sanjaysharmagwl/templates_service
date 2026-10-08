@@ -1,0 +1,12 @@
+{
+  "description": "ILLUSTRATIVE SAMPLE, not a real recording. Refunding more than was captured is refused.",
+  "given": {"payment_id": "pay_legacy_2", "captured_inr": "100.00"},
+  "when": {
+    "idempotency_key": "legacy-key-2",
+    "body": {"amount": {"value": "100.01", "currency": "INR"}}
+  },
+  "then": {
+    "status": 422,
+    "body": {"code": "refund_exceeds_refundable_amount"}
+  }
+}

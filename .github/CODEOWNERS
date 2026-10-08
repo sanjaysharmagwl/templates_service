@@ -1,0 +1,21 @@
+# Who must review changes to each area. Replace the placeholder teams with
+# real GitHub users or teams, then require code-owner review in the branch
+# protection rules for main.
+
+*                           @your-org/backend-team
+
+# Requirements and business rules: a domain owner approves.
+/specs/                     @your-org/domain-owners
+/docs/domain/               @your-org/domain-owners
+/src/*/domain/              @your-org/backend-leads
+
+# The API contract: breaking it affects every client.
+/contracts/                 @your-org/backend-leads
+
+# The checks themselves, and the instructions AI agents follow. A change here
+# changes what every later change is held to.
+/.github/                   @your-org/backend-leads
+/pyproject.toml             @your-org/backend-leads
+/Makefile                   @your-org/backend-leads
+/AGENTS.md                  @your-org/backend-leads
+/.agents/                   @your-org/backend-leads

@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  check:
+    name: make check
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      # Pinned to a commit, as its README recommends. Python is installed by
+      # uv from .python-version, and tool versions come from uv.lock.
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+
+      - name: Install dependencies exactly as locked
+        run: uv sync --locked
+
+      - name: Lint, types, layering, tests, traceability
+        run: make check
+
+  contract:
+    name: API contract is backwards compatible
+    # A deliberate breaking change is allowed through by a code owner adding
+    # the label below to the pull request. The label is the audit record.
+    if: >-
+      github.event_name == 'pull_request' &&
+      !contains(github.event.pull_request.labels.*.name, 'breaking-change-approved')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Fetch the contract on the target branch
+        id: base
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          git fetch --depth=1 origin "$BASE_REF"
+          if git cat-file -e "origin/$BASE_REF:contracts/openapi.json" 2>/dev/null; then
+            echo "has_contract=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_contract=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Fail on breaking changes
+        if: steps.base.outputs.has_contract == 'true'
+        uses: oasdiff/oasdiff-action/breaking@v0
+        with:
+          base: origin/${{ github.base_ref }}:contracts/openapi.json
+          revision: HEAD:contracts/openapi.json
+          fail-on: ERR
+          # The action's default uploads the comparison to oasdiff.com.
+          # Keep the API description inside CI.
+          review: false

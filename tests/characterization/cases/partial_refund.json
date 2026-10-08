@@ -1,0 +1,16 @@
+{
+  "description": "ILLUSTRATIVE SAMPLE, not a real recording. A partial refund is accepted.",
+  "given": {"payment_id": "pay_legacy_1", "captured_inr": "100.00"},
+  "when": {
+    "idempotency_key": "legacy-key-1",
+    "body": {"amount": {"value": "30.00", "currency": "INR"}, "reason": "Customer returned the item"}
+  },
+  "then": {
+    "status": 201,
+    "body": {
+      "payment_id": "pay_legacy_1",
+      "amount": {"value": "30.00", "currency": "INR"},
+      "reason": "Customer returned the item"
+    }
+  }
+}
